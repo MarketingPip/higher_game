@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"> 
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -18,7 +18,9 @@
   @keyframes fall { to { transform: translateY(100vh) rotate(720deg); opacity:0; } }
   .confetti { position:fixed; top:-10px; width:10px; height:10px; z-index:200; animation: fall linear forwards; }
   .timer-bar { transition: width linear; }
-  .toast-hidden { transform: translate(-50%, 100px); }
+  #toast { position:fixed; left:50%; bottom:24px; z-index:300; transition: transform .25s ease, opacity .25s ease; }
+  .ad-slot { border:1px dashed rgba(255,255,255,0.15); background:rgba(255,255,255,0.02); border-radius:14px; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.25); font-size:11px; text-transform:uppercase; letter-spacing:1px; font-weight:700; }
+  .card-img { width:100%; height:100%; object-fit:cover; display:block; }
 </style>
 </head>
 <body class="bg-gray-950 text-white min-h-screen overflow-x-hidden [-webkit-tap-highlight-color:transparent]">
@@ -29,37 +31,47 @@
   <div id="startScreen" class="flex-1 flex flex-col items-center justify-center px-6 py-10 text-center min-h-screen">
     <div class="text-6xl sm:text-7xl mb-4">⚡</div>
     <h1 class="text-5xl sm:text-6xl font-black tracking-tight grad-text mb-2">Higher</h1>
-    <p class="text-white/50 text-base sm:text-lg mb-6 leading-relaxed">Which one wins?<br>Tap to guess. Build your streak.</p>
 
-    <!-- Challenge banner: shown when arriving via a shared link -->
-    <div id="challengeBanner" class="hidden w-full bg-white/5 border border-yellow-400/20 rounded-2xl px-4 py-3 mb-6 text-sm text-left">
-      <div id="challengeBannerText" class="font-semibold text-yellow-400">🎯 You've been challenged!</div>
-      <div id="challengeBannerSub" class="text-white/50 mt-1"></div>
+    <p id="normalSubtitle" class="text-white/50 text-base sm:text-lg mb-6 leading-relaxed">Which one wins?<br>Tap to guess. Build your streak.</p>
+
+    <div id="challengeBanner" class="hidden w-full bg-white/5 border border-yellow-400/20 rounded-2xl px-4 py-4 mb-8 text-sm text-left">
+      <div id="challengeBannerText" class="font-semibold text-yellow-400 text-base mb-1">🎯 You've been challenged!</div>
+      <div id="challengeBannerSub" class="text-white/50"></div>
     </div>
 
-    <div class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 mb-6 text-left">
-      <div class="flex items-center justify-between">
-        <span class="text-sm font-semibold text-white/70">⏱ Timer</span>
-        <button id="timerToggle" onclick="toggleTimer()" class="w-12 h-7 rounded-full bg-white/10 relative transition-colors">
-          <span id="timerKnob" class="absolute top-1 left-1 w-5 h-5 rounded-full bg-white/40 transition-transform"></span>
-        </button>
-      </div>
-      <div id="timerSecondsRow" class="flex items-center justify-between mt-3 opacity-40 pointer-events-none">
-        <span class="text-xs text-white/50">Seconds per question</span>
-        <input id="timerSeconds" type="number" min="3" max="60" value="10" class="w-16 bg-white/10 rounded-lg px-2 py-1 text-center text-sm outline-none">
+    <div id="normalOptions" class="w-full">
+      <div class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 mb-6 text-left space-y-4">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-semibold text-white/70">⏱ Timer</span>
+          <button id="timerToggle" type="button" class="w-12 h-7 rounded-full bg-white/10 relative transition-colors">
+            <span id="timerKnob" class="absolute top-1 left-1 w-5 h-5 rounded-full bg-white/40 transition-transform"></span>
+          </button>
+        </div>
+        <div id="timerSecondsRow" class="flex items-center justify-between opacity-40 pointer-events-none">
+          <span class="text-xs text-white/50">Seconds per question</span>
+          <input id="timerSeconds" type="number" min="3" max="60" value="10" class="w-16 bg-white/10 rounded-lg px-2 py-1 text-center text-sm outline-none">
+        </div>
+        <div class="flex items-center justify-between pt-3 border-t border-white/10">
+          <span class="text-xs text-white/50">Questions per round</span>
+          <input id="maxQuestions" type="number" min="3" value="10" class="w-16 bg-white/10 rounded-lg px-2 py-1 text-center text-sm outline-none">
+        </div>
+        <div id="maxQuestionsHint" class="text-[11px] text-white/30 -mt-2"></div>
       </div>
     </div>
 
-    <button onclick="startGame()" class="grad-btn text-gray-950 font-extrabold uppercase tracking-wide text-base sm:text-lg px-14 py-4 rounded-full hover:scale-105 transition-transform shadow-lg shadow-red-500/20 w-full">Play Now</button>
+    <button id="playBtn" type="button" class="grad-btn text-gray-950 font-extrabold uppercase tracking-wide text-base sm:text-lg px-14 py-4 rounded-full hover:scale-105 transition-transform shadow-lg shadow-red-500/20 w-full">Play Now</button>
 
-    <button onclick="challengeFromStart()" class="w-full border-2 border-white/20 rounded-full px-12 py-3.5 mt-3 font-bold text-sm uppercase tracking-wide hover:border-white hover:bg-white/5 transition-colors">🎯 Challenge a Friend</button>
+    <button id="challengeStartBtn" type="button" class="w-full border-2 border-white/20 rounded-full px-12 py-3.5 mt-3 font-bold text-sm uppercase tracking-wide hover:border-white hover:bg-white/5 transition-colors">🎯 Challenge a Friend</button>
 
-    <div class="flex flex-wrap gap-2 justify-center mt-8 max-w-xs">
+    <div id="categoryTags" class="flex flex-wrap gap-2 justify-center mt-8 max-w-xs">
       <span class="px-3 py-1.5 rounded-full bg-white/5 text-white/50 text-xs font-semibold uppercase tracking-wide">Height</span>
       <span class="px-3 py-1.5 rounded-full bg-white/5 text-white/50 text-xs font-semibold uppercase tracking-wide">Weight</span>
       <span class="px-3 py-1.5 rounded-full bg-white/5 text-white/50 text-xs font-semibold uppercase tracking-wide">Age</span>
       <span class="px-3 py-1.5 rounded-full bg-white/5 text-white/50 text-xs font-semibold uppercase tracking-wide">Speed</span>
     </div>
+
+    <!-- AD SLOT: start screen banner (320x50) -->
+    <div class="ad-slot w-[320px] max-w-full h-[50px] mt-8">Advertisement</div>
   </div>
 
   <!-- GAME SCREEN -->
@@ -85,11 +97,11 @@
 
     <div id="questionText" class="text-center py-3 text-sm font-semibold text-white/60 uppercase tracking-wide px-4">Which is taller?</div>
 
-    <div class="flex-1 flex flex-col gap-3 px-4 pb-4 relative">
-      <div id="cardA" onclick="makeGuess('A')" class="card-anim flex-1 min-h-[190px] rounded-3xl overflow-hidden relative cursor-pointer border-2 border-transparent transition-all active:scale-[0.98]">
-        <div id="imageA" class="absolute inset-0 bg-cover bg-center"></div>
-        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
-        <div class="absolute bottom-0 left-0 right-0 p-5">
+    <div id="cardsContainer" class="flex-1 flex flex-col gap-3 px-4 pb-4 relative">
+      <div id="cardA" class="card-anim flex-1 min-h-[190px] rounded-3xl overflow-hidden relative cursor-pointer border-2 border-transparent transition-all active:scale-[0.98]">
+        <img id="imageA" class="card-img" alt="" decoding="async" loading="eager">
+        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none"></div>
+        <div class="absolute bottom-0 left-0 right-0 p-5 pointer-events-none">
           <div id="nameA" class="text-xl sm:text-2xl font-extrabold tracking-tight">Item A</div>
           <div id="hintA" class="text-xs sm:text-sm text-white/50 font-medium">Tap to choose</div>
           <div id="valueRowA" class="hidden text-2xl sm:text-3xl font-black mt-1">
@@ -98,12 +110,12 @@
         </div>
       </div>
 
-      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-gray-950 border-2 border-white/15 flex items-center justify-center text-xs font-extrabold text-white/40 z-10 tracking-wide">VS</div>
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-gray-950 border-2 border-white/15 flex items-center justify-center text-xs font-extrabold text-white/40 z-10 tracking-wide pointer-events-none">VS</div>
 
-      <div id="cardB" onclick="makeGuess('B')" class="card-anim flex-1 min-h-[190px] rounded-3xl overflow-hidden relative cursor-pointer border-2 border-transparent transition-all active:scale-[0.98]">
-        <div id="imageB" class="absolute inset-0 bg-cover bg-center"></div>
-        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
-        <div class="absolute bottom-0 left-0 right-0 p-5">
+      <div id="cardB" class="card-anim flex-1 min-h-[190px] rounded-3xl overflow-hidden relative cursor-pointer border-2 border-transparent transition-all active:scale-[0.98]">
+        <img id="imageB" class="card-img" alt="" decoding="async" loading="eager">
+        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none"></div>
+        <div class="absolute bottom-0 left-0 right-0 p-5 pointer-events-none">
           <div id="nameB" class="text-xl sm:text-2xl font-extrabold tracking-tight">Item B</div>
           <div id="hintB" class="text-xs sm:text-sm text-white/50 font-medium">Tap to choose</div>
           <div id="valueRowB" class="hidden text-2xl sm:text-3xl font-black mt-1">
@@ -112,6 +124,9 @@
         </div>
       </div>
     </div>
+
+    <!-- OPTIONAL AD SLOT: sticky anchor during gameplay -->
+    <div class="ad-slot w-full h-[50px]">Advertisement</div>
   </div>
 
   <!-- FEEDBACK OVERLAY -->
@@ -120,7 +135,7 @@
     <div id="feedbackText" class="text-3xl sm:text-4xl font-black mb-2">Correct!</div>
     <div id="feedbackSubtext" class="text-white/60 text-sm sm:text-base mb-8 leading-relaxed max-w-xs"></div>
     <div id="feedbackStreak" class="text-lg font-bold text-yellow-400 mb-6">🔥 Streak: 5</div>
-    <button onclick="nextRound()" class="grad-btn text-gray-950 font-extrabold uppercase tracking-wide px-12 py-4 rounded-full hover:scale-105 transition-transform">Next</button>
+    <button id="nextBtn" type="button" class="grad-btn text-gray-950 font-extrabold uppercase tracking-wide px-12 py-4 rounded-full hover:scale-105 transition-transform">Next</button>
   </div>
 
   <!-- GAME OVER -->
@@ -129,21 +144,23 @@
     <div class="text-3xl sm:text-4xl font-black mb-1">Game Over</div>
     <div id="gameOverScore" class="text-white/60 text-base sm:text-lg mb-4">You got 12 right</div>
 
-    <!-- Opponent comparison, shown only if link had a score -->
     <div id="comparisonBanner" class="hidden w-full rounded-2xl px-4 py-3 mb-4 text-sm font-semibold border"></div>
 
     <div id="gameOverStreak" class="text-5xl sm:text-6xl font-black grad-text mb-1">12</div>
     <div class="text-xs text-white/40 uppercase tracking-widest mb-6">Best Streak</div>
 
+    <!-- AD SLOT: game-over rectangle (300x250) -->
+    <div class="ad-slot w-[300px] max-w-full h-[250px] mb-6">Advertisement</div>
+
     <div id="shareResult" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 mb-4 font-mono text-xs sm:text-sm text-left leading-relaxed"></div>
 
-    <button onclick="restartGame()" class="grad-btn text-gray-950 font-extrabold uppercase tracking-wide px-12 py-4 rounded-full w-full mb-3 hover:scale-105 transition-transform">Play Again</button>
-    <button onclick="copyChallengeLink()" class="w-full border-2 border-white/20 rounded-full px-12 py-4 font-bold text-sm uppercase tracking-wide hover:border-white hover:bg-white/5 transition-colors mb-3">🔗 Challenge a Friend</button>
-    <button onclick="shareScore()" class="w-full border-2 border-white/20 rounded-full px-12 py-4 font-bold text-sm uppercase tracking-wide hover:border-white hover:bg-white/5 transition-colors">📋 Share Score</button>
+    <button id="restartBtn" type="button" class="grad-btn text-gray-950 font-extrabold uppercase tracking-wide px-12 py-4 rounded-full w-full mb-3 hover:scale-105 transition-transform">Play Again</button>
+    <button id="challengeEndBtn" type="button" class="w-full border-2 border-white/20 rounded-full px-12 py-4 font-bold text-sm uppercase tracking-wide hover:border-white hover:bg-white/5 transition-colors mb-3">🔗 Challenge a Friend</button>
+    <button id="shareScoreBtn" type="button" class="w-full border-2 border-white/20 rounded-full px-12 py-4 font-bold text-sm uppercase tracking-wide hover:border-white hover:bg-white/5 transition-colors">📋 Share Score</button>
   </div>
 
   <!-- TOAST -->
-  <div id="toast" class="toast-hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur border border-white/10 px-6 py-3 rounded-full text-sm font-semibold z-[300] transition-transform">Copied!</div>
+  <div id="toast" class="bg-white/10 backdrop-blur border border-white/10 px-6 py-3 rounded-full text-sm font-semibold">Copied!</div>
 </div>
 
 <script>
@@ -22956,6 +22973,10 @@ const gameData = [
   }
 ];
 
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { gameData };
+}
+
 
 /* ---------------- SEEDED RNG ---------------- */
 function hashSeed(str){
@@ -22971,14 +22992,16 @@ function mulberry32(a){
     return ((t ^ t>>>14) >>> 0) / 4294967296;
   };
 }
-function shuffleWithSeed(arr, seedStr){
+function pickShuffledSubset(arr, seedStr, count){
   const rand = mulberry32(hashSeed(seedStr));
   const out = [...arr];
-  for(let i=out.length-1;i>0;i--){
-    const j = Math.floor(rand()*(i+1));
+  const n = out.length;
+  const k = Math.max(1, Math.min(count, n));
+  for(let i=0;i<k;i++){
+    const j = i + Math.floor(rand()*(n-i));
     [out[i],out[j]] = [out[j],out[i]];
   }
-  return out;
+  return out.slice(0,k);
 }
 function generateSeed(){
   return Date.now().toString(36) + Math.random().toString(36).slice(2,8);
@@ -22990,8 +23013,8 @@ let isChallengeMode = urlParams.has('seed');
 let gameSeed = urlParams.get('seed') || null;
 let timerEnabled = isChallengeMode ? (parseInt(urlParams.get('timer')||'0',10) > 0) : false;
 let timerSeconds = isChallengeMode ? (parseInt(urlParams.get('timer')||'10',10) || 10) : 10;
+let maxQuestionsSetting = isChallengeMode ? (parseInt(urlParams.get('max')||'10',10) || 10) : 10;
 
-// Opponent's result, if the link was shared *after* a friend finished playing
 const hasOpponentScore = urlParams.has('score');
 const opponentScore = hasOpponentScore ? parseInt(urlParams.get('score'),10) : null;
 const opponentBest = urlParams.has('best') ? parseInt(urlParams.get('best'),10) : null;
@@ -23002,91 +23025,104 @@ let currentRound = 0, streak = 0, bestStreak = 0, score = 0;
 let shuffledData = [], currentQuestion = null, isRevealed = false, gameHistory = [];
 let timerInterval = null, timerTimeout = null, timeLeft = 0;
 
+/* ---------------- DOM REFS ---------------- */
+const el = id => document.getElementById(id);
+const maxQuestionsInput = el('maxQuestions');
+const timerSecondsInput = el('timerSeconds');
+const timerToggleBtn = el('timerToggle');
+
 /* ---------------- INIT ---------------- */
+function clampMaxQuestions(){
+  const hardCap = gameData.length;
+  let v = parseInt(maxQuestionsInput.value, 10);
+  if(isNaN(v) || v < 3) v = Math.min(3, hardCap);
+  if(v > hardCap) v = hardCap;
+  maxQuestionsInput.value = v;
+  return v;
+}
+
 function initFromUrl(){
+  const hardCap = gameData.length;
+  maxQuestionsInput.max = hardCap;
+  maxQuestionsInput.value = Math.min(10, hardCap);
+  el('maxQuestionsHint').textContent = `Max available: ${hardCap}`;
+
   if(!isChallengeMode) return;
 
-  const banner = document.getElementById('challengeBanner');
-  const text = document.getElementById('challengeBannerText');
-  const sub = document.getElementById('challengeBannerSub');
+  el('normalSubtitle').classList.add('hidden');
+  el('normalOptions').classList.add('hidden');
+  el('challengeStartBtn').classList.add('hidden');
+  el('categoryTags').classList.add('hidden');
+
+  const banner = el('challengeBanner');
+  const sub = el('challengeBannerSub');
   banner.classList.remove('hidden');
 
   if(hasOpponentScore){
-    text.textContent = '🎯 You\'ve been challenged!';
     const totalStr = opponentTotal != null ? `/${opponentTotal}` : '';
     sub.textContent = `Your friend got ${opponentScore}${totalStr}` +
       (opponentBest != null ? `, best streak 🔥 ${opponentBest}` : '') +
       `. Beat it!`;
   } else {
-    text.textContent = '🎯 You\'ve been challenged!';
     sub.textContent = `Same match-ups as your friend — good luck.`;
   }
 
-  // lock timer controls to the challenger's setting
-  document.getElementById('timerToggle').classList.add('pointer-events-none','opacity-60');
-  setTimerUI(timerEnabled);
-  document.getElementById('timerSeconds').value = timerSeconds;
-  document.getElementById('timerSeconds').disabled = true;
+  el('playBtn').textContent = 'Accept Challenge';
 }
-initFromUrl();
 
 function toggleTimer(){
-  if(isChallengeMode) return; // locked by challenge link
+  if(isChallengeMode) return;
   timerEnabled = !timerEnabled;
   setTimerUI(timerEnabled);
 }
 function setTimerUI(on){
-  const knob = document.getElementById('timerKnob');
-  const toggle = document.getElementById('timerToggle');
-  const row = document.getElementById('timerSecondsRow');
-  knob.style.transform = on ? 'translateX(20px)' : 'translateX(0)';
-  toggle.classList.toggle('bg-yellow-400/80', on);
-  row.classList.toggle('opacity-40', !on);
-  row.classList.toggle('pointer-events-none', !on);
+  el('timerKnob').style.transform = on ? 'translateX(20px)' : 'translateX(0)';
+  timerToggleBtn.classList.toggle('bg-yellow-400/80', on);
+  el('timerSecondsRow').classList.toggle('opacity-40', !on);
+  el('timerSecondsRow').classList.toggle('pointer-events-none', !on);
+}
+
+function readOptionsFromUI(){
+  timerEnabled = timerToggleBtn.classList.contains('bg-yellow-400/80');
+  timerSeconds = parseInt(timerSecondsInput.value,10) || 10;
+  maxQuestionsSetting = clampMaxQuestions();
 }
 
 /* ---------------- CHALLENGE FROM START SCREEN ---------------- */
 function challengeFromStart(){
-  // If we don't have a seed yet, mint one now so "Play" and the shared
-  // link use the exact same match-ups.
   if(!gameSeed) gameSeed = generateSeed();
-
-  const enabled = isChallengeMode ? timerEnabled : document.getElementById('timerToggle').classList.contains('bg-yellow-400/80');
-  const secs = isChallengeMode ? timerSeconds : (parseInt(document.getElementById('timerSeconds').value,10) || 10);
-  timerEnabled = enabled;
-  timerSeconds = secs;
+  readOptionsFromUI();
 
   const p = new URLSearchParams();
   p.set('seed', gameSeed);
-  p.set('timer', enabled ? secs : 0);
+  p.set('timer', timerEnabled ? timerSeconds : 0);
+  p.set('max', maxQuestionsSetting);
   copyToClipboard(`${location.origin}${location.pathname}?${p.toString()}`, 'Challenge link copied!');
 }
 
 /* ---------------- GAME FLOW ---------------- */
 function startGame(){
   if(!gameSeed) gameSeed = generateSeed();
-  if(!isChallengeMode){
-    timerEnabled = document.getElementById('timerToggle').classList.contains('bg-yellow-400/80');
-    timerSeconds = parseInt(document.getElementById('timerSeconds').value,10) || 10;
-  }
+  if(!isChallengeMode) readOptionsFromUI();
+  else maxQuestionsSetting = Math.min(maxQuestionsSetting, gameData.length);
 
-  // reflect current settings in the URL so it's shareable at any point
   const p = new URLSearchParams();
   p.set('seed', gameSeed);
   p.set('timer', timerEnabled ? timerSeconds : 0);
+  p.set('max', maxQuestionsSetting);
   history.replaceState(null, '', '?' + p.toString());
 
-  document.getElementById('startScreen').classList.add('hidden');
-  document.getElementById('gameScreen').classList.remove('hidden');
-  document.getElementById('gameScreen').classList.add('flex');
-  document.getElementById('gameOver').classList.add('hidden');
-  document.getElementById('gameOver').classList.remove('flex');
+  el('startScreen').classList.add('hidden');
+  el('gameScreen').classList.remove('hidden');
+  el('gameScreen').classList.add('flex');
+  el('gameOver').classList.add('hidden');
+  el('gameOver').classList.remove('flex');
 
   currentRound = 0; streak = 0; score = 0; gameHistory = [];
-  shuffledData = shuffleWithSeed(gameData, gameSeed);
+  shuffledData = pickShuffledSubset(gameData, gameSeed, maxQuestionsSetting);
 
-  document.getElementById('timerDisplay').classList.toggle('hidden', !timerEnabled);
-  document.getElementById('timerBarWrap').classList.toggle('hidden', !timerEnabled);
+  el('timerDisplay').classList.toggle('hidden', !timerEnabled);
+  el('timerBarWrap').classList.toggle('hidden', !timerEnabled);
 
   updateStreak();
   loadRound();
@@ -23099,19 +23135,33 @@ function loadRound(){
   isRevealed = false;
   currentQuestion = shuffledData[currentRound];
 
-  document.getElementById('progressFill').style.width = (currentRound/shuffledData.length*100)+'%';
-  document.getElementById('questionText').textContent = currentQuestion.question;
+  el('progressFill').style.width = (currentRound/shuffledData.length*100)+'%';
+  el('questionText').textContent = currentQuestion.question;
 
   ['A','B'].forEach(k=>{
-    const card = document.getElementById('card'+k);
+    const card = el('card'+k);
     card.className = 'card-anim flex-1 min-h-[190px] rounded-3xl overflow-hidden relative cursor-pointer border-2 border-transparent transition-all active:scale-[0.98]';
-    document.getElementById('image'+k).style.backgroundImage = `url(${currentQuestion['item'+k].image})`;
-    document.getElementById('name'+k).textContent = currentQuestion['item'+k].name;
-    document.getElementById('hint'+k).textContent = 'Tap to choose';
-    document.getElementById('hint'+k).classList.remove('hidden');
-    document.getElementById('valueRow'+k).classList.add('hidden');
-    document.getElementById('value'+k).textContent = formatValue(currentQuestion['item'+k].value);
-    document.getElementById('unit'+k).textContent = currentQuestion['item'+k].unit;
+    card.style.boxShadow = '';
+
+    // Force the fade-in to replay each round.
+    card.style.animation = 'none';
+    void card.offsetHeight; // reflow
+    card.style.animation = '';
+
+    const item = currentQuestion['item'+k];
+    const img = el('image'+k);
+    // Reset src first so identical back-to-back images still force a
+    // fresh decode/paint instead of the browser treating it as a no-op.
+    img.src = '';
+    img.src = item.image;
+    img.alt = item.name;
+
+    el('name'+k).textContent = item.name;
+    el('hint'+k).textContent = 'Tap to choose';
+    el('hint'+k).classList.remove('hidden');
+    el('valueRow'+k).classList.add('hidden');
+    el('value'+k).textContent = formatValue(item.value);
+    el('unit'+k).textContent = item.unit;
   });
 
   if(timerEnabled) startTimer();
@@ -23127,21 +23177,21 @@ function formatValue(val){
 /* ---------------- TIMER ---------------- */
 function startTimer(){
   timeLeft = timerSeconds;
-  document.getElementById('timerNum').textContent = timeLeft;
-  const bar = document.getElementById('timerBar');
+  el('timerNum').textContent = timeLeft;
+  const bar = el('timerBar');
   bar.style.transition = 'none';
   bar.style.width = '100%';
-  bar.offsetHeight; // reflow
+  void bar.offsetHeight;
   bar.style.transition = `width ${timerSeconds}s linear`;
   bar.style.width = '0%';
 
   timerInterval = setInterval(()=>{
     timeLeft--;
-    document.getElementById('timerNum').textContent = Math.max(timeLeft,0);
+    el('timerNum').textContent = Math.max(timeLeft,0);
   }, 1000);
 
   timerTimeout = setTimeout(()=>{
-    if(!isRevealed) makeGuess(null); // time's up = auto-fail
+    if(!isRevealed) makeGuess(null);
   }, timerSeconds*1000);
 }
 function clearTimer(){
@@ -23158,15 +23208,26 @@ function makeGuess(guess){
   const isCorrect = guess === correct;
 
   ['A','B'].forEach(k=>{
-    document.getElementById('hint'+k).classList.add('hidden');
-    document.getElementById('valueRow'+k).classList.remove('hidden');
+    el('hint'+k).classList.add('hidden');
+    el('valueRow'+k).classList.remove('hidden');
+    el('card'+k).classList.add('pointer-events-none');
   });
 
-  const winCard = document.getElementById('card'+correct);
-  const loseCard = document.getElementById('card'+(correct==='A'?'B':'A'));
-  winCard.classList.add('border-green-500');
-  winCard.style.boxShadow = '0 0 40px rgba(46,204,113,.3)';
-  loseCard.classList.add('opacity-60');
+  const correctCard = el('card'+correct);
+  correctCard.classList.add('border-green-500');
+  correctCard.style.boxShadow = '0 0 40px rgba(46,204,113,.3)';
+
+  if(guess && !isCorrect){
+    const wrongCard = el('card'+guess);
+    wrongCard.classList.add('border-red-500');
+    wrongCard.style.boxShadow = '0 0 30px rgba(231,76,60,.35)';
+  } else if(isCorrect){
+    const otherKey = correct === 'A' ? 'B' : 'A';
+    el('card'+otherKey).classList.add('opacity-50');
+  } else if(!guess){
+    const otherKey = correct === 'A' ? 'B' : 'A';
+    el('card'+otherKey).classList.add('opacity-50');
+  }
 
   if(isCorrect){ streak++; score++; if(streak>bestStreak) bestStreak = streak; }
   else streak = 0;
@@ -23178,11 +23239,11 @@ function makeGuess(guess){
 }
 
 function showFeedback(isCorrect){
-  const overlay = document.getElementById('feedbackOverlay');
-  const emoji = document.getElementById('feedbackEmoji');
-  const text = document.getElementById('feedbackText');
-  const subtext = document.getElementById('feedbackSubtext');
-  const streakEl = document.getElementById('feedbackStreak');
+  const overlay = el('feedbackOverlay');
+  const emoji = el('feedbackEmoji');
+  const text = el('feedbackText');
+  const subtext = el('feedbackSubtext');
+  const streakEl = el('feedbackStreak');
 
   const winner = currentQuestion.answer==='A' ? currentQuestion.itemA : currentQuestion.itemB;
   const loser = currentQuestion.answer==='A' ? currentQuestion.itemB : currentQuestion.itemA;
@@ -23205,7 +23266,7 @@ function showFeedback(isCorrect){
 }
 
 function nextRound(){
-  const overlay = document.getElementById('feedbackOverlay');
+  const overlay = el('feedbackOverlay');
   overlay.classList.add('hidden'); overlay.classList.remove('flex');
   currentRound++;
   loadRound();
@@ -23213,21 +23274,21 @@ function nextRound(){
 
 function endGame(){
   clearTimer();
-  document.getElementById('gameScreen').classList.add('hidden');
-  document.getElementById('gameScreen').classList.remove('flex');
-  const go = document.getElementById('gameOver');
+  el('gameScreen').classList.add('hidden');
+  el('gameScreen').classList.remove('flex');
+  const go = el('gameOver');
   go.classList.remove('hidden'); go.classList.add('flex');
 
-  document.getElementById('gameOverScore').textContent = `You got ${score} right out of ${shuffledData.length}`;
-  document.getElementById('gameOverStreak').textContent = bestStreak;
-  document.getElementById('shareResult').innerHTML = generateShareText().replace(/\n/g,'<br>');
+  el('gameOverScore').textContent = `You got ${score} right out of ${shuffledData.length}`;
+  el('gameOverStreak').textContent = bestStreak;
+  el('shareResult').innerHTML = generateShareText().replace(/\n/g,'<br>');
 
   renderComparison();
 }
 
 function renderComparison(){
-  const el = document.getElementById('comparisonBanner');
-  if(!hasOpponentScore){ el.classList.add('hidden'); return; }
+  const box = el('comparisonBanner');
+  if(!hasOpponentScore){ box.classList.add('hidden'); return; }
 
   const total = opponentTotal != null ? opponentTotal : shuffledData.length;
   let msg, colorClasses;
@@ -23241,18 +23302,18 @@ function renderComparison(){
     msg = `🤝 Tie! You both got ${score}/${shuffledData.length}.`;
     colorClasses = 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400';
   }
-  el.textContent = msg;
-  el.className = `w-full rounded-2xl px-4 py-3 mb-4 text-sm font-semibold border ${colorClasses}`;
-  el.classList.remove('hidden');
+  box.textContent = msg;
+  box.className = `w-full rounded-2xl px-4 py-3 mb-4 text-sm font-semibold border ${colorClasses}`;
+  box.classList.remove('hidden');
 }
 
 function restartGame(){
-  const go = document.getElementById('gameOver');
+  const go = el('gameOver');
   go.classList.add('hidden'); go.classList.remove('flex');
-  document.getElementById('startScreen').classList.remove('hidden');
+  el('startScreen').classList.remove('hidden');
 }
 
-function updateStreak(){ document.getElementById('streakCount').textContent = streak; }
+function updateStreak(){ el('streakCount').textContent = streak; }
 
 /* ---------------- SHARE / CHALLENGE ---------------- */
 function generateShareText(){
@@ -23266,6 +23327,7 @@ function buildChallengeUrl(includeScore){
   const p = new URLSearchParams();
   p.set('seed', gameSeed);
   p.set('timer', timerEnabled ? timerSeconds : 0);
+  p.set('max', shuffledData.length);
   if(includeScore){
     p.set('score', score);
     p.set('best', bestStreak);
@@ -23296,11 +23358,17 @@ function copyToClipboard(text, msg){
   }
 }
 
+let toastTimeout = null;
 function showToast(msg){
-  const toast = document.getElementById('toast');
+  const toast = el('toast');
   toast.textContent = msg;
-  toast.classList.remove('toast-hidden');
-  setTimeout(()=>toast.classList.add('toast-hidden'), 2000);
+  toast.style.transform = 'translate(-50%, 0)';
+  toast.style.opacity = '1';
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(()=>{
+    toast.style.transform = 'translate(-50%, 100px)';
+    toast.style.opacity = '0';
+  }, 2000);
 }
 
 /* ---------------- CONFETTI ---------------- */
@@ -23318,12 +23386,36 @@ function createConfetti(){
   }
 }
 
-/* ---------------- KEYBOARD ---------------- */
-document.addEventListener('keydown', e=>{
-  if(e.key==='ArrowUp'||e.key==='ArrowLeft') makeGuess('A');
-  if(e.key==='ArrowDown'||e.key==='ArrowRight') makeGuess('B');
-  if((e.key==='Enter'||e.key===' ') && !document.getElementById('feedbackOverlay').classList.contains('hidden')) nextRound();
-});
+/* ---------------- EVENT BINDING ---------------- */
+function bindEvents(){
+  el('playBtn').addEventListener('click', startGame);
+  el('challengeStartBtn').addEventListener('click', challengeFromStart);
+  el('challengeEndBtn').addEventListener('click', copyChallengeLink);
+  el('shareScoreBtn').addEventListener('click', shareScore);
+  el('restartBtn').addEventListener('click', restartGame);
+  el('nextBtn').addEventListener('click', nextRound);
+  timerToggleBtn.addEventListener('click', toggleTimer);
+
+  el('cardA').addEventListener('click', () => makeGuess('A'));
+  el('cardB').addEventListener('click', () => makeGuess('B'));
+
+  maxQuestionsInput.addEventListener('input', clampMaxQuestions);
+  maxQuestionsInput.addEventListener('blur', clampMaxQuestions);
+
+  document.addEventListener('keydown', e=>{
+    if(e.key==='ArrowUp'||e.key==='ArrowLeft') makeGuess('A');
+    if(e.key==='ArrowDown'||e.key==='ArrowRight') makeGuess('B');
+    if((e.key==='Enter'||e.key===' ') && !el('feedbackOverlay').classList.contains('hidden')) nextRound();
+  });
+
+  // Toast starts hidden — set via JS, not a CSS class, to avoid any
+  // stylesheet/inline-style precedence conflicts.
+  el('toast').style.transform = 'translate(-50%, 100px)';
+  el('toast').style.opacity = '0';
+}
+
+initFromUrl();
+bindEvents();
 </script>
 </body>
 </html>

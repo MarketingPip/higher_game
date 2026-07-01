@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Higher - Which One Wins?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+  .grad-text { background: linear-gradient(135deg,#ff6b6b,#feca57); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .grad-btn { background: linear-gradient(135deg,#ff6b6b,#feca57); }
+  @keyframes fadeInUp { from{opacity:0; transform:translateY(16px)} to{opacity:1; transform:translateY(0)} }
+  .card-anim { animation: fadeInUp .35s ease forwards; }
+  @keyframes bounce { 0%,100%{transform:scale(1)} 50%{transform:scale(1.2)} }
+  .bounce { animation: bounce .5s ease; }
+  @keyframes fall { to { transform: translateY(100vh) rotate(720deg); opacity:0; } }
+  .confetti { position:fixed; top:-10px; width:10px; height:10px; z-index:200; animation: fall linear forwards; }
+  .timer-bar { transition: width linear; }
+  .toast-hidden { transform: translate(-50%, 100px); }
+</style>
+</head>
+<body class="bg-gray-950 text-white min-h-screen overflow-x-hidden [-webkit-tap-highlight-color:transparent]">
+
+<div class="w-full max-w-md mx-auto min-h-screen flex flex-col relative">
+
+  <!-- START SCREEN -->
+  <div id="startScreen" class="flex-1 flex flex-col items-center justify-center px-6 py-10 text-center min-h-screen">
+    <div class="text-6xl sm:text-7xl mb-4">⚡</div>
+    <h1 class="text-5xl sm:text-6xl font-black tracking-tight grad-text mb-2">Higher</h1>
+    <p class="text-white/50 text-base sm:text-lg mb-6 leading-relaxed">Which one wins?<br>Tap to guess. Build your streak.</p>
+
+    <!-- Challenge banner: shown when arriving via a shared link -->
+    <div id="challengeBanner" class="hidden w-full bg-white/5 border border-yellow-400/20 rounded-2xl px-4 py-3 mb-6 text-sm text-left">
+      <div id="challengeBannerText" class="font-semibold text-yellow-400">🎯 You've been challenged!</div>
+      <div id="challengeBannerSub" class="text-white/50 mt-1"></div>
+    </div>
+
+    <div class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 mb-6 text-left">
+      <div class="flex items-center justify-between">
+        <span class="text-sm font-semibold text-white/70">⏱ Timer</span>
+        <button id="timerToggle" onclick="toggleTimer()" class="w-12 h-7 rounded-full bg-white/10 relative transition-colors">
+          <span id="timerKnob" class="absolute top-1 left-1 w-5 h-5 rounded-full bg-white/40 transition-transform"></span>
+        </button>
+      </div>
+      <div id="timerSecondsRow" class="flex items-center justify-between mt-3 opacity-40 pointer-events-none">
+        <span class="text-xs text-white/50">Seconds per question</span>
+        <input id="timerSeconds" type="number" min="3" max="60" value="10" class="w-16 bg-white/10 rounded-lg px-2 py-1 text-center text-sm outline-none">
+      </div>
+    </div>
+
+    <button onclick="startGame()" class="grad-btn text-gray-950 font-extrabold uppercase tracking-wide text-base sm:text-lg px-14 py-4 rounded-full hover:scale-105 transition-transform shadow-lg shadow-red-500/20 w-full">Play Now</button>
+
+    <button onclick="challengeFromStart()" class="w-full border-2 border-white/20 rounded-full px-12 py-3.5 mt-3 font-bold text-sm uppercase tracking-wide hover:border-white hover:bg-white/5 transition-colors">🎯 Challenge a Friend</button>
+
+    <div class="flex flex-wrap gap-2 justify-center mt-8 max-w-xs">
+      <span class="px-3 py-1.5 rounded-full bg-white/5 text-white/50 text-xs font-semibold uppercase tracking-wide">Height</span>
+      <span class="px-3 py-1.5 rounded-full bg-white/5 text-white/50 text-xs font-semibold uppercase tracking-wide">Weight</span>
+      <span class="px-3 py-1.5 rounded-full bg-white/5 text-white/50 text-xs font-semibold uppercase tracking-wide">Age</span>
+      <span class="px-3 py-1.5 rounded-full bg-white/5 text-white/50 text-xs font-semibold uppercase tracking-wide">Speed</span>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="gameScreen" class="hidden flex-col min-h-screen">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-white/5">
+      <div class="text-2xl font-black tracking-tight grad-text">Higher</div>
+      <div class="flex items-center gap-4">
+        <div id="timerDisplay" class="hidden flex items-center gap-1 text-sm font-bold text-red-400">
+          <span>⏱</span><span id="timerNum">10</span>
+        </div>
+        <div class="flex items-center gap-1.5 text-sm font-bold text-yellow-400">
+          <span class="text-lg">🔥</span><span id="streakCount">0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="h-1 bg-white/5 relative">
+      <div id="progressFill" class="h-full grad-btn rounded-r-full transition-all duration-300" style="width:0%"></div>
+    </div>
+    <div id="timerBarWrap" class="hidden h-1 bg-white/5">
+      <div id="timerBar" class="h-full bg-gradient-to-r from-red-500 to-yellow-400 timer-bar" style="width:100%"></div>
+    </div>
+
+    <div id="questionText" class="text-center py-3 text-sm font-semibold text-white/60 uppercase tracking-wide px-4">Which is taller?</div>
+
+    <div class="flex-1 flex flex-col gap-3 px-4 pb-4 relative">
+      <div id="cardA" onclick="makeGuess('A')" class="card-anim flex-1 min-h-[190px] rounded-3xl overflow-hidden relative cursor-pointer border-2 border-transparent transition-all active:scale-[0.98]">
+        <div id="imageA" class="absolute inset-0 bg-cover bg-center"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+        <div class="absolute bottom-0 left-0 right-0 p-5">
+          <div id="nameA" class="text-xl sm:text-2xl font-extrabold tracking-tight">Item A</div>
+          <div id="hintA" class="text-xs sm:text-sm text-white/50 font-medium">Tap to choose</div>
+          <div id="valueRowA" class="hidden text-2xl sm:text-3xl font-black mt-1">
+            <span id="valueA">0</span><span id="unitA" class="text-sm font-medium text-white/60 ml-1">unit</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-gray-950 border-2 border-white/15 flex items-center justify-center text-xs font-extrabold text-white/40 z-10 tracking-wide">VS</div>
+
+      <div id="cardB" onclick="makeGuess('B')" class="card-anim flex-1 min-h-[190px] rounded-3xl overflow-hidden relative cursor-pointer border-2 border-transparent transition-all active:scale-[0.98]">
+        <div id="imageB" class="absolute inset-0 bg-cover bg-center"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+        <div class="absolute bottom-0 left-0 right-0 p-5">
+          <div id="nameB" class="text-xl sm:text-2xl font-extrabold tracking-tight">Item B</div>
+          <div id="hintB" class="text-xs sm:text-sm text-white/50 font-medium">Tap to choose</div>
+          <div id="valueRowB" class="hidden text-2xl sm:text-3xl font-black mt-1">
+            <span id="valueB">0</span><span id="unitB" class="text-sm font-medium text-white/60 ml-1">unit</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEEDBACK OVERLAY -->
+  <div id="feedbackOverlay" class="hidden fixed inset-0 bg-black/85 items-center justify-center z-[100] flex-col px-6 text-center">
+    <div id="feedbackEmoji" class="text-7xl sm:text-8xl mb-4 bounce">🎉</div>
+    <div id="feedbackText" class="text-3xl sm:text-4xl font-black mb-2">Correct!</div>
+    <div id="feedbackSubtext" class="text-white/60 text-sm sm:text-base mb-8 leading-relaxed max-w-xs"></div>
+    <div id="feedbackStreak" class="text-lg font-bold text-yellow-400 mb-6">🔥 Streak: 5</div>
+    <button onclick="nextRound()" class="grad-btn text-gray-950 font-extrabold uppercase tracking-wide px-12 py-4 rounded-full hover:scale-105 transition-transform">Next</button>
+  </div>
+
+  <!-- GAME OVER -->
+  <div id="gameOver" class="hidden flex-col items-center justify-center min-h-screen px-6 py-10 text-center">
+    <div class="text-7xl sm:text-8xl mb-4">💀</div>
+    <div class="text-3xl sm:text-4xl font-black mb-1">Game Over</div>
+    <div id="gameOverScore" class="text-white/60 text-base sm:text-lg mb-4">You got 12 right</div>
+
+    <!-- Opponent comparison, shown only if link had a score -->
+    <div id="comparisonBanner" class="hidden w-full rounded-2xl px-4 py-3 mb-4 text-sm font-semibold border"></div>
+
+    <div id="gameOverStreak" class="text-5xl sm:text-6xl font-black grad-text mb-1">12</div>
+    <div class="text-xs text-white/40 uppercase tracking-widest mb-6">Best Streak</div>
+
+    <div id="shareResult" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 mb-4 font-mono text-xs sm:text-sm text-left leading-relaxed"></div>
+
+    <button onclick="restartGame()" class="grad-btn text-gray-950 font-extrabold uppercase tracking-wide px-12 py-4 rounded-full w-full mb-3 hover:scale-105 transition-transform">Play Again</button>
+    <button onclick="copyChallengeLink()" class="w-full border-2 border-white/20 rounded-full px-12 py-4 font-bold text-sm uppercase tracking-wide hover:border-white hover:bg-white/5 transition-colors mb-3">🔗 Challenge a Friend</button>
+    <button onclick="shareScore()" class="w-full border-2 border-white/20 rounded-full px-12 py-4 font-bold text-sm uppercase tracking-wide hover:border-white hover:bg-white/5 transition-colors">📋 Share Score</button>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="toast-hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur border border-white/10 px-6 py-3 rounded-full text-sm font-semibold z-[300] transition-transform">Copied!</div>
+</div>
+
+<script>
+/* ---------------- GAME DATA ---------------- */
+const gameData = [
+  {
+    itemA: { name: "Eiffel Tower", value: 330, unit: "meters", image: "https://images.unsplash.com/photo-1511739001486-6bfe10ce7859?w=400&h=400&fit=crop" },
+    itemB: { name: "Statue of Liberty", value: 93, unit: "meters", image: "https://images.unsplash.com/photo-1605130284535-11dd9eedc58a?w=400&h=400&fit=crop" },
+    question: "Which is taller?",
+    category: "height",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Blue Whale", value: 30, unit: "meters", image: "https://images.unsplash.com/photo-1568430462989-44163eb1752f?w=400&h=400&fit=crop" },
+    itemB: { name: "Giraffe", value: 5.5, unit: "meters", image: "https://images.unsplash.com/photo-1547721064-da6cfb341d50?w=400&h=400&fit=crop" },
+    question: "Which is taller?",
+    category: "height",
+    answer: "A"
+  },
+  {
+    itemA: { name: "iPhone 15 Pro", value: 187, unit: "grams", image: "https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=400&h=400&fit=crop" },
+    itemB: { name: "Baseball", value: 145, unit: "grams", image: "https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=400&h=400&fit=crop" },
+    question: "Which weighs more?",
+    category: "weight",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Tesla Model S", value: 2100, unit: "kg", image: "https://images.unsplash.com/photo-1617788138017-80ad40651399?w=400&h=400&fit=crop" },
+    itemB: { name: "Hippopotamus", value: 1500, unit: "kg", image: "https://images.unsplash.com/photo-1535591273668-578e31182c4f?w=400&h=400&fit=crop" },
+    question: "Which weighs more?",
+    category: "weight",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Mona Lisa", value: 1506, unit: "year painted", image: "https://images.unsplash.com/photo-1550948537-130a1ce83314?w=400&h=400&fit=crop" },
+    itemB: { name: "The Starry Night", value: 1889, unit: "year painted", image: "https://images.unsplash.com/photo-1545989253-02cc26577f88?w=400&h=400&fit=crop" },
+    question: "Which is older?",
+    category: "age",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Internet", value: 1983, unit: "year invented", image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&h=400&fit=crop" },
+    itemB: { name: "World Wide Web", value: 1989, unit: "year invented", image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=400&fit=crop" },
+    question: "Which came first?",
+    category: "age",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Burj Khalifa", value: 828, unit: "meters", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=400&fit=crop" },
+    itemB: { name: "Empire State Building", value: 443, unit: "meters", image: "https://images.unsplash.com/photo-1555109307-f7d9da25c244?w=400&h=400&fit=crop" },
+    question: "Which is taller?",
+    category: "height",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Great White Shark", value: 1100, unit: "kg", image: "https://images.unsplash.com/photo-1560275619-4662e36fa65c?w=400&h=400&fit=crop" },
+    itemB: { name: "Polar Bear", value: 450, unit: "kg", image: "https://images.unsplash.com/photo-1589656966895-2f33e7653819?w=400&h=400&fit=crop" },
+    question: "Which weighs more?",
+    category: "weight",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Pyramids of Giza", value: -2560, unit: "BCE", image: "https://images.unsplash.com/photo-1503177119275-0aa32b3a9368?w=400&h=400&fit=crop" },
+    itemB: { name: "Colosseum", value: 80, unit: "CE", image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400&h=400&fit=crop" },
+    question: "Which is older?",
+    category: "age",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Mount Everest", value: 8848, unit: "meters", image: "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=400&fit=crop" },
+    itemB: { name: "K2", value: 8611, unit: "meters", image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&h=400&fit=crop" },
+    question: "Which is taller?",
+    category: "height",
+    answer: "A"
+  },
+  {
+    itemA: { name: "African Elephant", value: 6000, unit: "kg", image: "https://images.unsplash.com/photo-1557050543-4d5f4e07ef46?w=400&h=400&fit=crop" },
+    itemB: { name: "Rhinoceros", value: 2300, unit: "kg", image: "https://images.unsplash.com/photo-1535591273668-578e31182c4f?w=400&h=400&fit=crop" },
+    question: "Which weighs more?",
+    category: "weight",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Light Bulb", value: 1879, unit: "year invented", image: "https://images.unsplash.com/photo-1493612276216-ee3925520721?w=400&h=400&fit=crop" },
+    itemB: { name: "Telephone", value: 1876, unit: "year invented", image: "https://images.unsplash.com/photo-1520923642038-b4259ace70b1?w=400&h=400&fit=crop" },
+    question: "Which came first?",
+    category: "age",
+    answer: "B"
+  },
+  {
+    itemA: { name: "Golden Gate Bridge", value: 227, unit: "meters tall", image: "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=400&h=400&fit=crop" },
+    itemB: { name: "Big Ben", value: 96, unit: "meters tall", image: "https://images.unsplash.com/photo-1529655683826-aba9b3e77383?w=400&h=400&fit=crop" },
+    question: "Which is taller?",
+    category: "height",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Airplane (Boeing 747)", value: 183500, unit: "kg", image: "https://images.unsplash.com/photo-1556388158-158ea5ccacbd?w=400&h=400&fit=crop" },
+    itemB: { name: "Blue Whale", value: 150000, unit: "kg", image: "https://images.unsplash.com/photo-1568430462989-44163eb1752f?w=400&h=400&fit=crop" },
+    question: "Which weighs more?",
+    category: "weight",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Wheel", value: -3500, unit: "BCE", image: "https://images.unsplash.com/photo-1516979187457-637abb4f9353?w=400&h=400&fit=crop" },
+    itemB: { name: "Writing", value: -3200, unit: "BCE", image: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&h=400&fit=crop" },
+    question: "Which came first?",
+    category: "age",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Amazon Rainforest", value: 5500000, unit: "km²", image: "https://images.unsplash.com/photo-1516934024742-b461fba47600?w=400&h=400&fit=crop" },
+    itemB: { name: "Australia", value: 7692000, unit: "km²", image: "https://images.unsplash.com/photo-1523482580672-f109ba8cb9be?w=400&h=400&fit=crop" },
+    question: "Which is bigger?",
+    category: "size",
+    answer: "B"
+  },
+  {
+    itemA: { name: "Chess", value: 600, unit: "years old (approx)", image: "https://images.unsplash.com/photo-1529699211952-734e80c4d42b?w=400&h=400&fit=crop" },
+    itemB: { name: "Go", value: 2500, unit: "years old (approx)", image: "https://images.unsplash.com/photo-1586165368502-1bad197a6461?w=400&h=400&fit=crop" },
+    question: "Which is older?",
+    category: "age",
+    answer: "B"
+  },
+  {
+    itemA: { name: "Nile River", value: 6650, unit: "km", image: "https://images.unsplash.com/photo-1539650116455-251d9a063595?w=400&h=400&fit=crop" },
+    itemB: { name: "Amazon River", value: 6400, unit: "km", image: "https://images.unsplash.com/photo-1516934024742-b461fba47600?w=400&h=400&fit=crop" },
+    question: "Which is longer?",
+    category: "length",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Shark", value: 450, unit: "million years old", image: "https://images.unsplash.com/photo-1560275619-4662e36fa65c?w=400&h=400&fit=crop" },
+    itemB: { name: "Dinosaurs", value: 230, unit: "million years old", image: "https://images.unsplash.com/photo-1569163139599-0f4517e36f51?w=400&h=400&fit=crop" },
+    question: "Which has existed longer?",
+    category: "age",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Moon", value: 384400, unit: "km from Earth", image: "https://images.unsplash.com/photo-1522030299830-16b8d3d049fe?w=400&h=400&fit=crop" },
+    itemB: { name: "International Space Station", value: 408, unit: "km from Earth", image: "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=400&h=400&fit=crop" },
+    question: "Which is farther from Earth?",
+    category: "distance",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Piano", value: 88, unit: "keys", image: "https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=400&h=400&fit=crop" },
+    itemB: { name: "Guitar", value: 6, unit: "strings", image: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=400&h=400&fit=crop" },
+    question: "Which has more keys/strings?",
+    category: "count",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Human Brain", value: 1.4, unit: "kg", image: "https://images.unsplash.com/photo-1559757175-5700dde675bc?w=400&h=400&fit=crop" },
+    itemB: { name: "Human Heart", value: 0.3, unit: "kg", image: "https://images.unsplash.com/photo-1628348070889-cb656235b4eb?w=400&h=400&fit=crop" },
+    question: "Which weighs more?",
+    category: "weight",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Marathon", value: 42.195, unit: "km", image: "https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=400&h=400&fit=crop" },
+    itemB: { name: "10K Run", value: 10, unit: "km", image: "https://images.unsplash.com/photo-1571008887538-b36bb32f47b3?w=400&h=400&fit=crop" },
+    question: "Which is longer?",
+    category: "length",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Octopus", value: 3, unit: "hearts", image: "https://images.unsplash.com/photo-1545671913-b89ac1b4ac10?w=400&h=400&fit=crop" },
+    itemB: { name: "Human", value: 1, unit: "heart", image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop" },
+    question: "Which has more hearts?",
+    category: "count",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Saturn V Rocket", value: 110.6, unit: "meters", image: "https://images.unsplash.com/photo-1517976487492-5750f3195933?w=400&h=400&fit=crop" },
+    itemB: { name: "Statue of Liberty", value: 93, unit: "meters", image: "https://images.unsplash.com/photo-1605130284535-11dd9eedc58a?w=400&h=400&fit=crop" },
+    question: "Which is taller?",
+    category: "height",
+    answer: "A"
+  },
+  {
+    itemA: { name: "T-Rex", value: 9000, unit: "kg", image: "https://images.unsplash.com/photo-1569163139599-0f4517e36f51?w=400&h=400&fit=crop" },
+    itemB: { name: "African Elephant", value: 6000, unit: "kg", image: "https://images.unsplash.com/photo-1557050543-4d5f4e07ef46?w=400&h=400&fit=crop" },
+    question: "Which weighs more?",
+    category: "weight",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Facebook", value: 2004, unit: "year founded", image: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400&h=400&fit=crop" },
+    itemB: { name: "Twitter/X", value: 2006, unit: "year founded", image: "https://images.unsplash.com/photo-1611605698335-8b1569810432?w=400&h=400&fit=crop" },
+    question: "Which came first?",
+    category: "age",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Great Wall of China", value: 21196, unit: "km", image: "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=400&h=400&fit=crop" },
+    itemB: { name: "USA East Coast", value: 3700, unit: "km", image: "https://images.unsplash.com/photo-1485738422979-f5c462d49f74?w=400&h=400&fit=crop" },
+    question: "Which is longer?",
+    category: "length",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Ostrich Egg", value: 1.5, unit: "kg", image: "https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=400&h=400&fit=crop" },
+    itemB: { name: "Chicken Egg", value: 0.05, unit: "kg", image: "https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=400&h=400&fit=crop" },
+    question: "Which weighs more?",
+    category: "weight",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Jupiter", value: 139820, unit: "km diameter", image: "https://images.unsplash.com/photo-1614732414444-096e5f1122d5?w=400&h=400&fit=crop" },
+    itemB: { name: "Earth", value: 12742, unit: "km diameter", image: "https://images.unsplash.com/photo-1614730341194-75c607400070?w=400&h=400&fit=crop" },
+    question: "Which is bigger?",
+    category: "size",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Honey Bee", value: 0.0001, unit: "kg", image: "https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?w=400&h=400&fit=crop" },
+    itemB: { name: "Ant", value: 0.000003, unit: "kg", image: "https://images.unsplash.com/photo-1535068484622-7a079e573d8a?w=400&h=400&fit=crop" },
+    question: "Which weighs more?",
+    category: "weight",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Football Field", value: 109, unit: "meters", image: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=400&h=400&fit=crop" },
+    itemB: { name: "Basketball Court", value: 28, unit: "meters", image: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=400&fit=crop" },
+    question: "Which is longer?",
+    category: "length",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Taj Mahal", value: 73, unit: "meters tall", image: "https://images.unsplash.com/photo-1564507592333-c60657eea523?w=400&h=400&fit=crop" },
+    itemB: { name: "Leaning Tower of Pisa", value: 56, unit: "meters tall", image: "https://images.unsplash.com/photo-1528114039593-43664da1e6ae?w=400&h=400&fit=crop" },
+    question: "Which is taller?",
+    category: "height",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Cheetah", value: 120, unit: "km/h", image: "https://images.unsplash.com/photo-1504006833117-8886a36e6bf3?w=400&h=400&fit=crop" },
+    itemB: { name: "Peregrine Falcon", value: 320, unit: "km/h", image: "https://images.unsplash.com/photo-1611689342806-0863700ce1e4?w=400&h=400&fit=crop" },
+    question: "Which is faster?",
+    category: "speed",
+    answer: "B"
+  },
+  {
+    itemA: { name: "Human Eye", value: 576, unit: "megapixels (approx)", image: "https://images.unsplash.com/photo-1494869042583-f6c911f04b4c?w=400&h=400&fit=crop" },
+    itemB: { name: "iPhone 15 Camera", value: 48, unit: "megapixels", image: "https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=400&h=400&fit=crop" },
+    question: "Which has more megapixels?",
+    category: "count",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Sahara Desert", value: 9.2, unit: "million km²", image: "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=400&h=400&fit=crop" },
+    itemB: { name: "USA", value: 9.8, unit: "million km²", image: "https://images.unsplash.com/photo-1485738422979-f5c462d49f74?w=400&h=400&fit=crop" },
+    question: "Which is bigger?",
+    category: "size",
+    answer: "B"
+  },
+  {
+    itemA: { name: "Vinyl Record", value: 1948, unit: "year invented", image: "https://images.unsplash.com/photo-1603048588665-791ca8aea617?w=400&h=400&fit=crop" },
+    itemB: { name: "CD", value: 1982, unit: "year invented", image: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=400&h=400&fit=crop" },
+    question: "Which came first?",
+    category: "age",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Sydney Opera House", value: 65, unit: "meters tall", image: "https://images.unsplash.com/photo-1624138784181-dc7f5b75e52e?w=400&h=400&fit=crop" },
+    itemB: { name: "Sydney Harbour Bridge", value: 134, unit: "meters tall", image: "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=400&h=400&fit=crop" },
+    question: "Which is taller?",
+    category: "height",
+    answer: "B"
+  },
+  {
+    itemA: { name: "Penguin", value: 40, unit: "km/h swimming", image: "https://images.unsplash.com/photo-1551986782-d0169b3f8fa7?w=400&h=400&fit=crop" },
+    itemB: { name: "Olympic Swimmer", value: 8, unit: "km/h", image: "https://images.unsplash.com/photo-1530549387789-4c1017266635?w=400&h=400&fit=crop" },
+    question: "Which swims faster?",
+    category: "speed",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Bitcoin", value: 2009, unit: "year created", image: "https://images.unsplash.com/photo-1518546305927-5a555bb7020d?w=400&h=400&fit=crop" },
+    itemB: { name: "Ethereum", value: 2015, unit: "year created", image: "https://images.unsplash.com/photo-1621761191319-c6fb62004040?w=400&h=400&fit=crop" },
+    question: "Which came first?",
+    category: "age",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Giraffe Tongue", value: 50, unit: "cm", image: "https://images.unsplash.com/photo-1547721064-da6cfb341d50?w=400&h=400&fit=crop" },
+    itemB: { name: "Human Arm", value: 60, unit: "cm (average)", image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop" },
+    question: "Which is longer?",
+    category: "length",
+    answer: "B"
+  },
+  {
+    itemA: { name: "Tokyo", value: 37.4, unit: "million people", image: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=400&fit=crop" },
+    itemB: { name: "New York City", value: 8.3, unit: "million people", image: "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=400&h=400&fit=crop" },
+    question: "Which has more people?",
+    category: "count",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Guitar", value: 6, unit: "strings", image: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=400&h=400&fit=crop" },
+    itemB: { name: "Violin", value: 4, unit: "strings", image: "https://images.unsplash.com/photo-1612225330812-01a9c6b355ec?w=400&h=400&fit=crop" },
+    question: "Which has more strings?",
+    category: "count",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Nile Crocodile", value: 500, unit: "kg", image: "https://images.unsplash.com/photo-1522606560942-8367d3c0ae2c?w=400&h=400&fit=crop" },
+    itemB: { name: "Lion", value: 190, unit: "kg", image: "https://images.unsplash.com/photo-1546182990-dffeafbe841d?w=400&h=400&fit=crop" },
+    question: "Which weighs more?",
+    category: "weight",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Olympics", value: 1896, unit: "year first modern games", image: "https://images.unsplash.com/photo-1461896836934- voices-of-children-1607618?w=400&h=400&fit=crop" },
+    itemB: { name: "FIFA World Cup", value: 1930, unit: "year first tournament", image: "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=400&h=400&fit=crop" },
+    question: "Which came first?",
+    category: "age",
+    answer: "A"
+  },
+  {
+    itemA: { name: "Mount Fuji", value: 3776, unit: "meters", image: "https://images.unsplash.com/photo-1490806843957-31f4c9a91c65?w=400&h=400&fit=crop" },
+    itemB: { name: "Mount Kilimanjaro", value: 5895, unit: "meters", image: "https://images.unsplash.com/photo-1657664043003-8c1d245f8f63?w=400&h=400&fit=crop" },
+    question: "Which is taller?",
+    category: "height",
+    answer: "B"
+  },
+  {
+    itemA: { name: "Rubik's Cube", value: 43, unit: "quintillion combinations", image: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=400&h=400&fit=crop" },
+    itemB: { name: "Deck of Cards", value: 8, unit: "quintillion shuffles", image: "https://images.unsplash.com/photo-1597055181300-e30ba15247b5?w=400&h=400&fit=crop" },
+    question: "Which has more combinations?",
+    category: "count",
+    answer: "A"
+  }
+];
+
+/* ---------------- SEEDED RNG ---------------- */
+function hashSeed(str){
+  let hash = 5381;
+  for(let i=0;i<str.length;i++){ hash = ((hash<<5)+hash) + str.charCodeAt(i); hash |= 0; }
+  return hash >>> 0;
+}
+function mulberry32(a){
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ a>>>15, 1 | a);
+    t = (t + Math.imul(t ^ t>>>7, 61 | t)) ^ t;
+    return ((t ^ t>>>14) >>> 0) / 4294967296;
+  };
+}
+function shuffleWithSeed(arr, seedStr){
+  const rand = mulberry32(hashSeed(seedStr));
+  const out = [...arr];
+  for(let i=out.length-1;i>0;i--){
+    const j = Math.floor(rand()*(i+1));
+    [out[i],out[j]] = [out[j],out[i]];
+  }
+  return out;
+}
+function generateSeed(){
+  return Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+}
+
+/* ---------------- URL STATE ---------------- */
+const urlParams = new URLSearchParams(window.location.search);
+let isChallengeMode = urlParams.has('seed');
+let gameSeed = urlParams.get('seed') || null;
+let timerEnabled = isChallengeMode ? (parseInt(urlParams.get('timer')||'0',10) > 0) : false;
+let timerSeconds = isChallengeMode ? (parseInt(urlParams.get('timer')||'10',10) || 10) : 10;
+
+// Opponent's result, if the link was shared *after* a friend finished playing
+const hasOpponentScore = urlParams.has('score');
+const opponentScore = hasOpponentScore ? parseInt(urlParams.get('score'),10) : null;
+const opponentBest = urlParams.has('best') ? parseInt(urlParams.get('best'),10) : null;
+const opponentTotal = urlParams.has('total') ? parseInt(urlParams.get('total'),10) : null;
+
+/* ---------------- STATE ---------------- */
+let currentRound = 0, streak = 0, bestStreak = 0, score = 0;
+let shuffledData = [], currentQuestion = null, isRevealed = false, gameHistory = [];
+let timerInterval = null, timerTimeout = null, timeLeft = 0;
+
+/* ---------------- INIT ---------------- */
+function initFromUrl(){
+  if(!isChallengeMode) return;
+
+  const banner = document.getElementById('challengeBanner');
+  const text = document.getElementById('challengeBannerText');
+  const sub = document.getElementById('challengeBannerSub');
+  banner.classList.remove('hidden');
+
+  if(hasOpponentScore){
+    text.textContent = '🎯 You\'ve been challenged!';
+    const totalStr = opponentTotal != null ? `/${opponentTotal}` : '';
+    sub.textContent = `Your friend got ${opponentScore}${totalStr}` +
+      (opponentBest != null ? `, best streak 🔥 ${opponentBest}` : '') +
+      `. Beat it!`;
+  } else {
+    text.textContent = '🎯 You\'ve been challenged!';
+    sub.textContent = `Same match-ups as your friend — good luck.`;
+  }
+
+  // lock timer controls to the challenger's setting
+  document.getElementById('timerToggle').classList.add('pointer-events-none','opacity-60');
+  setTimerUI(timerEnabled);
+  document.getElementById('timerSeconds').value = timerSeconds;
+  document.getElementById('timerSeconds').disabled = true;
+}
+initFromUrl();
+
+function toggleTimer(){
+  if(isChallengeMode) return; // locked by challenge link
+  timerEnabled = !timerEnabled;
+  setTimerUI(timerEnabled);
+}
+function setTimerUI(on){
+  const knob = document.getElementById('timerKnob');
+  const toggle = document.getElementById('timerToggle');
+  const row = document.getElementById('timerSecondsRow');
+  knob.style.transform = on ? 'translateX(20px)' : 'translateX(0)';
+  toggle.classList.toggle('bg-yellow-400/80', on);
+  row.classList.toggle('opacity-40', !on);
+  row.classList.toggle('pointer-events-none', !on);
+}
+
+/* ---------------- CHALLENGE FROM START SCREEN ---------------- */
+function challengeFromStart(){
+  // If we don't have a seed yet, mint one now so "Play" and the shared
+  // link use the exact same match-ups.
+  if(!gameSeed) gameSeed = generateSeed();
+
+  const enabled = isChallengeMode ? timerEnabled : document.getElementById('timerToggle').classList.contains('bg-yellow-400/80');
+  const secs = isChallengeMode ? timerSeconds : (parseInt(document.getElementById('timerSeconds').value,10) || 10);
+  timerEnabled = enabled;
+  timerSeconds = secs;
+
+  const p = new URLSearchParams();
+  p.set('seed', gameSeed);
+  p.set('timer', enabled ? secs : 0);
+  copyToClipboard(`${location.origin}${location.pathname}?${p.toString()}`, 'Challenge link copied!');
+}
+
+/* ---------------- GAME FLOW ---------------- */
+function startGame(){
+  if(!gameSeed) gameSeed = generateSeed();
+  if(!isChallengeMode){
+    timerEnabled = document.getElementById('timerToggle').classList.contains('bg-yellow-400/80');
+    timerSeconds = parseInt(document.getElementById('timerSeconds').value,10) || 10;
+  }
+
+  // reflect current settings in the URL so it's shareable at any point
+  const p = new URLSearchParams();
+  p.set('seed', gameSeed);
+  p.set('timer', timerEnabled ? timerSeconds : 0);
+  history.replaceState(null, '', '?' + p.toString());
+
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.remove('hidden');
+  document.getElementById('gameScreen').classList.add('flex');
+  document.getElementById('gameOver').classList.add('hidden');
+  document.getElementById('gameOver').classList.remove('flex');
+
+  currentRound = 0; streak = 0; score = 0; gameHistory = [];
+  shuffledData = shuffleWithSeed(gameData, gameSeed);
+
+  document.getElementById('timerDisplay').classList.toggle('hidden', !timerEnabled);
+  document.getElementById('timerBarWrap').classList.toggle('hidden', !timerEnabled);
+
+  updateStreak();
+  loadRound();
+}
+
+function loadRound(){
+  clearTimer();
+  if(currentRound >= shuffledData.length){ endGame(); return; }
+
+  isRevealed = false;
+  currentQuestion = shuffledData[currentRound];
+
+  document.getElementById('progressFill').style.width = (currentRound/shuffledData.length*100)+'%';
+  document.getElementById('questionText').textContent = currentQuestion.question;
+
+  ['A','B'].forEach(k=>{
+    const card = document.getElementById('card'+k);
+    card.className = 'card-anim flex-1 min-h-[190px] rounded-3xl overflow-hidden relative cursor-pointer border-2 border-transparent transition-all active:scale-[0.98]';
+    document.getElementById('image'+k).style.backgroundImage = `url(${currentQuestion['item'+k].image})`;
+    document.getElementById('name'+k).textContent = currentQuestion['item'+k].name;
+    document.getElementById('hint'+k).textContent = 'Tap to choose';
+    document.getElementById('hint'+k).classList.remove('hidden');
+    document.getElementById('valueRow'+k).classList.add('hidden');
+    document.getElementById('value'+k).textContent = formatValue(currentQuestion['item'+k].value);
+    document.getElementById('unit'+k).textContent = currentQuestion['item'+k].unit;
+  });
+
+  if(timerEnabled) startTimer();
+}
+
+function formatValue(val){
+  if(val>=1000000) return (val/1000000).toFixed(1)+'M';
+  if(val>=1000) return (val/1000).toFixed(1)+'K';
+  if(val<0) return Math.abs(val)+' BCE';
+  return val.toString();
+}
+
+/* ---------------- TIMER ---------------- */
+function startTimer(){
+  timeLeft = timerSeconds;
+  document.getElementById('timerNum').textContent = timeLeft;
+  const bar = document.getElementById('timerBar');
+  bar.style.transition = 'none';
+  bar.style.width = '100%';
+  bar.offsetHeight; // reflow
+  bar.style.transition = `width ${timerSeconds}s linear`;
+  bar.style.width = '0%';
+
+  timerInterval = setInterval(()=>{
+    timeLeft--;
+    document.getElementById('timerNum').textContent = Math.max(timeLeft,0);
+  }, 1000);
+
+  timerTimeout = setTimeout(()=>{
+    if(!isRevealed) makeGuess(null); // time's up = auto-fail
+  }, timerSeconds*1000);
+}
+function clearTimer(){
+  clearInterval(timerInterval); clearTimeout(timerTimeout);
+}
+
+/* ---------------- GUESS ---------------- */
+function makeGuess(guess){
+  if(isRevealed) return;
+  isRevealed = true;
+  clearTimer();
+
+  const correct = currentQuestion.answer;
+  const isCorrect = guess === correct;
+
+  ['A','B'].forEach(k=>{
+    document.getElementById('hint'+k).classList.add('hidden');
+    document.getElementById('valueRow'+k).classList.remove('hidden');
+  });
+
+  const winCard = document.getElementById('card'+correct);
+  const loseCard = document.getElementById('card'+(correct==='A'?'B':'A'));
+  winCard.classList.add('border-green-500');
+  winCard.style.boxShadow = '0 0 40px rgba(46,204,113,.3)';
+  loseCard.classList.add('opacity-60');
+
+  if(isCorrect){ streak++; score++; if(streak>bestStreak) bestStreak = streak; }
+  else streak = 0;
+  updateStreak();
+
+  gameHistory.push({ itemA:currentQuestion.itemA.name, itemB:currentQuestion.itemB.name, isCorrect, timedOut: guess===null });
+
+  setTimeout(()=>showFeedback(isCorrect), 700);
+}
+
+function showFeedback(isCorrect){
+  const overlay = document.getElementById('feedbackOverlay');
+  const emoji = document.getElementById('feedbackEmoji');
+  const text = document.getElementById('feedbackText');
+  const subtext = document.getElementById('feedbackSubtext');
+  const streakEl = document.getElementById('feedbackStreak');
+
+  const winner = currentQuestion.answer==='A' ? currentQuestion.itemA : currentQuestion.itemB;
+  const loser = currentQuestion.answer==='A' ? currentQuestion.itemB : currentQuestion.itemA;
+  subtext.textContent = `${winner.name} (${formatValue(winner.value)} ${winner.unit}) beats ${loser.name} (${formatValue(loser.value)} ${loser.unit})`;
+
+  if(isCorrect){
+    const emojis = ['🎉','🔥','⚡','🚀','💪','👑'];
+    emoji.textContent = emojis[Math.min(streak-1, emojis.length-1)];
+    text.textContent = streak>=5 ? 'Unstoppable!' : streak>=3 ? 'On Fire!' : 'Correct!';
+    text.classList.remove('text-red-500'); text.classList.add('text-green-400');
+    if(streak>=5) createConfetti();
+  } else {
+    emoji.textContent = '💀';
+    text.textContent = 'Wrong!';
+    text.classList.remove('text-green-400'); text.classList.add('text-red-500');
+  }
+  streakEl.textContent = streak>0 ? `🔥 Streak: ${streak}` : 'Streak reset!';
+
+  overlay.classList.remove('hidden'); overlay.classList.add('flex');
+}
+
+function nextRound(){
+  const overlay = document.getElementById('feedbackOverlay');
+  overlay.classList.add('hidden'); overlay.classList.remove('flex');
+  currentRound++;
+  loadRound();
+}
+
+function endGame(){
+  clearTimer();
+  document.getElementById('gameScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.remove('flex');
+  const go = document.getElementById('gameOver');
+  go.classList.remove('hidden'); go.classList.add('flex');
+
+  document.getElementById('gameOverScore').textContent = `You got ${score} right out of ${shuffledData.length}`;
+  document.getElementById('gameOverStreak').textContent = bestStreak;
+  document.getElementById('shareResult').innerHTML = generateShareText().replace(/\n/g,'<br>');
+
+  renderComparison();
+}
+
+function renderComparison(){
+  const el = document.getElementById('comparisonBanner');
+  if(!hasOpponentScore){ el.classList.add('hidden'); return; }
+
+  const total = opponentTotal != null ? opponentTotal : shuffledData.length;
+  let msg, colorClasses;
+  if(score > opponentScore){
+    msg = `🏆 You win! ${score}/${shuffledData.length} beats your friend's ${opponentScore}/${total}.`;
+    colorClasses = 'bg-green-500/10 border-green-500/30 text-green-400';
+  } else if(score < opponentScore){
+    msg = `😅 Your friend wins. They got ${opponentScore}/${total}, you got ${score}/${shuffledData.length}.`;
+    colorClasses = 'bg-red-500/10 border-red-500/30 text-red-400';
+  } else {
+    msg = `🤝 Tie! You both got ${score}/${shuffledData.length}.`;
+    colorClasses = 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400';
+  }
+  el.textContent = msg;
+  el.className = `w-full rounded-2xl px-4 py-3 mb-4 text-sm font-semibold border ${colorClasses}`;
+  el.classList.remove('hidden');
+}
+
+function restartGame(){
+  const go = document.getElementById('gameOver');
+  go.classList.add('hidden'); go.classList.remove('flex');
+  document.getElementById('startScreen').classList.remove('hidden');
+}
+
+function updateStreak(){ document.getElementById('streakCount').textContent = streak; }
+
+/* ---------------- SHARE / CHALLENGE ---------------- */
+function generateShareText(){
+  let t = `<div class="font-bold text-yellow-400 mb-1">Higher</div>`;
+  t += `🔥 Best Streak: ${bestStreak}\n🧠 Score: ${score}/${shuffledData.length}\n\n`;
+  gameHistory.forEach(h=>{ t += `${h.isCorrect?'✅':'❌'} ${h.itemA} vs ${h.itemB}\n`; });
+  return t;
+}
+
+function buildChallengeUrl(includeScore){
+  const p = new URLSearchParams();
+  p.set('seed', gameSeed);
+  p.set('timer', timerEnabled ? timerSeconds : 0);
+  if(includeScore){
+    p.set('score', score);
+    p.set('best', bestStreak);
+    p.set('total', shuffledData.length);
+  }
+  return `${location.origin}${location.pathname}?${p.toString()}`;
+}
+
+function copyChallengeLink(){
+  copyToClipboard(buildChallengeUrl(true), 'Challenge link copied!');
+}
+
+function shareScore(){
+  const plain = `Higher\n🔥 Best Streak: ${bestStreak}\n🧠 Score: ${score}/${shuffledData.length}\n\n` +
+    gameHistory.map(h=>`${h.isCorrect?'✅':'❌'} ${h.itemA} vs ${h.itemB}`).join('\n');
+  copyToClipboard(plain, 'Score copied!');
+}
+
+function copyToClipboard(text, msg){
+  const done = ()=>showToast(msg);
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(text).then(done);
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    done();
+  }
+}
+
+function showToast(msg){
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.remove('toast-hidden');
+  setTimeout(()=>toast.classList.add('toast-hidden'), 2000);
+}
+
+/* ---------------- CONFETTI ---------------- */
+function createConfetti(){
+  const colors = ['#ff6b6b','#feca57','#48dbfb','#ff9ff3','#54a0ff'];
+  for(let i=0;i<50;i++){
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.left = Math.random()*100+'vw';
+    c.style.backgroundColor = colors[Math.floor(Math.random()*colors.length)];
+    c.style.animationDuration = (Math.random()*2+2)+'s';
+    c.style.borderRadius = Math.random()>0.5 ? '50%' : '0';
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(), 4000);
+  }
+}
+
+/* ---------------- KEYBOARD ---------------- */
+document.addEventListener('keydown', e=>{
+  if(e.key==='ArrowUp'||e.key==='ArrowLeft') makeGuess('A');
+  if(e.key==='ArrowDown'||e.key==='ArrowRight') makeGuess('B');
+  if((e.key==='Enter'||e.key===' ') && !document.getElementById('feedbackOverlay').classList.contains('hidden')) nextRound();
+});
+</script>
+</body>
+</html>
